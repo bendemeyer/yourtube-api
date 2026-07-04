@@ -18,17 +18,7 @@ services:
     volumes:
       - ../:/app
       - $GOPATH/pkg/mod:/go/pkg/mod
+    ports:
+      - "8080:8090"
     environment:
       POSTGRES_DSN: postgresql://postgres:password@db:5432/yourtube?sslmode=disable
-  nginx:
-    image: nginx
-    depends_on:
-      - app
-    volumes:
-      - ./templates:/etc/nginx/templates
-    ports:
-      - "8080:80"
-    environment:
-      - NGINX_PORT=80
-      - APP_PORT=8090
-

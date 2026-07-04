@@ -48,6 +48,9 @@ func main() {
 
 	sqldb.InitDb(dsn)
 
+	// Healthcheck
+	router.GET("/_healthcheck")
+
 	// Auth
 	router.POST("/authenticate")
 
@@ -62,7 +65,7 @@ func main() {
 	router.PUT("/channel/:channel_id", controllers.PutChannel)
 
 	// User management
-	router.POST("/user")
+	router.POST("/user", controllers.AddUser)
 	router.GET("/user/:user_id")
 	router.PUT("/user/:user_id")
 
@@ -75,13 +78,12 @@ func main() {
 	// User-level channel management
 	router.GET("/user/:user_id/channels")
 	router.GET("/user/:user_id/channel/:channel_id")
-	router.PUT("/user/:user_id/channel/:channel_id")
-	router.DELETE("/user/:user_id/channel/:channel_id")
+	router.PUT("/user/:user_id/channel/:channel_id", controllers.AddUserChannel)
+	router.DELETE("/user/:user_id/channel/:channel_id", controllers.DeleteUserChannel)
 
 	// User-level available videos
 	router.GET("/user/:user_id/videos", controllers.GetUserVideos)
-	router.GET("/user/:user_id/video/:video_id")
-	router.GET("/user/:user_id/video/:video_id/watch", controllers.GetVideoPlayer)
+	router.GET("/user/:user_id/video/:video_id", controllers.GetUserVideo)
 
 	// User-level video exception management
 	router.PUT("/user/:user_id/allow/:video_id")
@@ -90,9 +92,8 @@ func main() {
 	router.DELETE("/user/:user_id/block/:video_id")
 
 	// User-level video view management
-	router.GET("/user/:user_id/views")
-	router.GET("/user/:user_id/view/:video_id")
-	router.PUT("/user/:user_id/view/:video_id")
+	router.GET("/user/:user_id/views", controllers.GetViewedVideos)
+	router.POST("/user/:user_id/view/:video_id", controllers.UpdateProgress)
 
 	listener, err := GetListener(port, socket)
 	if err != nil {

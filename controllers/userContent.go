@@ -49,7 +49,7 @@ func AddUserChannel(ctx *gin.Context) {
 	}
 
 	db := sqldb.GetDb()
-	userChannel := &models.AllowedChannel{
+	userChannel := &models.UserAllowedChannel{
 		UserId:    int32(userId),
 		ChannelId: channel.Id,
 	}
@@ -90,7 +90,7 @@ func DeleteUserChannel(ctx *gin.Context) {
 	channelId := ctx.Param("channel_id")
 	db := sqldb.GetDb()
 
-	userChannel := &models.AllowedChannel{
+	userChannel := &models.UserAllowedChannel{
 		UserId:    int32(userId),
 		ChannelId: channelId,
 	}

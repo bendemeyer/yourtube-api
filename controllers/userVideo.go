@@ -144,7 +144,7 @@ func UpdateProgress(ctx *gin.Context) {
 	}
 
 	db := sqldb.GetDb()
-	view := &models.VideoView{
+	view := &models.UserVideoView{
 		UserId:    int32(userId),
 		VideoId:   videoId,
 		Progress:  request.Progress,

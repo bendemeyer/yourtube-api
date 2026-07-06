@@ -32,18 +32,27 @@ func InitDb(dsn string) {
 		(*models.Playlist)(nil),
 		(*models.PlaylistVideo)(nil),
 		(*models.Category)(nil),
+		(*models.Family)(nil),
+		(*models.FamilyAllowedChannel)(nil),
+		(*models.FamilyAllowedVideo)(nil),
+		(*models.FamilyBlockedVideo)(nil),
 		(*models.User)(nil),
-		(*models.AllowedChannel)(nil),
-		(*models.AllowedVideo)(nil),
-		(*models.BlockedVideo)(nil),
-		(*models.VideoView)(nil),
+		(*models.UserAllowedChannel)(nil),
+		(*models.UserBlockedChannel)(nil),
+		(*models.UserAllowedVideo)(nil),
+		(*models.UserBlockedVideo)(nil),
+		(*models.UserVideoView)(nil),
 	}
 
 	bundb.RegisterModel(
 		(*models.PlaylistVideo)(nil),
-		(*models.AllowedChannel)(nil),
-		(*models.AllowedVideo)(nil),
-		(*models.BlockedVideo)(nil),
+		(*models.FamilyAllowedChannel)(nil),
+		(*models.FamilyAllowedVideo)(nil),
+		(*models.FamilyBlockedVideo)(nil),
+		(*models.UserAllowedChannel)(nil),
+		(*models.UserBlockedChannel)(nil),
+		(*models.UserAllowedVideo)(nil),
+		(*models.UserBlockedVideo)(nil),
 	)
 
 	for _, model := range tableModels {

@@ -61,11 +61,12 @@ func main() {
 
 	// Global channel management
 	router.GET("/channels", controllers.GetChannels)
+	router.POST("/channels")
 	router.GET("/channel/:channel_id", controllers.GetChannel)
 	router.PUT("/channel/:channel_id", controllers.PutChannel)
 
 	// User management
-	router.POST("/user", controllers.AddUser)
+	router.POST("/users", controllers.AddUser)
 	router.GET("/user/:user_id")
 	router.PUT("/user/:user_id")
 
@@ -77,8 +78,8 @@ func main() {
 
 	// User-level channel management
 	router.GET("/user/:user_id/channels")
+	router.POST("/user/:user_id/channels", controllers.AddUserChannel)
 	router.GET("/user/:user_id/channel/:channel_id")
-	router.PUT("/user/:user_id/channel/:channel_id", controllers.AddUserChannel)
 	router.DELETE("/user/:user_id/channel/:channel_id", controllers.DeleteUserChannel)
 
 	// User-level available videos

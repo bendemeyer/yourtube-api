@@ -20,12 +20,38 @@ func AddUserChannel(ctx *gin.Context) {
 		return
 	}
 
-	channelId := ctx.Param("channel_id")
-	db := sqldb.GetDb()
+	type AddUserChannelRequestBody struct {
+		Handle string `json:"handle"`
+	}
+	var body AddUserChannelRequestBody
+	body_err := ctx.ShouldBindJSON(&body)
+	if body_err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   body_err.Error(),
+		})
+		return
+	}
 
+	var channel models.Channel
+	exists, exists_err := getChannelByHandle(body.Handle)
+	if len(exists) == 0 && exists_err == nil {
+		c, err := bootstrapChannel(body.Handle)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   err.Error(),
+			})
+		}
+		channel = c
+	} else {
+		channel = exists[0]
+	}
+
+	db := sqldb.GetDb()
 	userChannel := &models.AllowedChannel{
 		UserId:    int32(userId),
-		ChannelId: channelId,
+		ChannelId: channel.Id,
 	}
 	query := db.NewInsert().Model(userChannel)
 	sqlString := query.String()

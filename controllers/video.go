@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -149,6 +150,12 @@ func GetVideos(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func upsertVideo(video models.Video) (sql.Result, error) {
+	db := sqldb.GetDb()
+	result, err := db.NewInsert().Model(video).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
+	return result, err
 }
 
 func PutVideo(ctx *gin.Context) {

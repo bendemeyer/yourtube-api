@@ -18,6 +18,14 @@ type Channel struct {
 	Playlists   []*Playlist `json:"playlists,omitempty" bun:"rel:has-many,join:id=channel_id"`
 }
 
+func (c Channel) GetUploadsPlaylist() string {
+	return "UU" + c.Id[2:]
+}
+
+func (c Channel) GetShortsPlaylist() string {
+	return "UUSH" + c.Id[2:]
+}
+
 type Video struct {
 	bun.BaseModel `bun:"table:videos"`
 

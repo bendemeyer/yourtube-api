@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"database/sql"
+	"iter"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,6 +27,45 @@ func getChannelByHandle(handle string) ([]models.Channel, error) {
 	channels := []models.Channel{}
 	err := db.NewSelect().Model(models.Channel{}).Where("handle = ?", handle).Scan(context.Background(), &channels)
 	return channels, err
+}
+
+func getChannels(offset int, limit int) ([]models.Channel, error) {
+	db := sqldb.GetDb()
+	result := []models.Channel{}
+	err := db.NewSelect().
+		Model(&result).
+		Offset(offset).
+		Limit(limit).
+		Scan(context.Background())
+	return result, err
+}
+
+func generateAllChannels() iter.Seq[models.Channel] {
+	return func(yield func(models.Channel) bool) {
+		complete := false
+		buffer := []models.Channel{}
+		offset := 0
+		batchSize := 1000
+
+		for complete == false || len(buffer) > 0 {
+			if len(buffer) == 0 {
+				channels, err := getChannels(offset, batchSize)
+				if err != nil {
+					continue
+				}
+				if len(channels) < batchSize {
+					complete = true
+				}
+				buffer = channels
+				offset += batchSize
+			}
+			next := buffer[0]
+			buffer = buffer[1:]
+			if !yield(next) {
+				return
+			}
+		}
+	}
 }
 
 func GetChannel(ctx *gin.Context) {

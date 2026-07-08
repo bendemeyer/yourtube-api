@@ -54,6 +54,9 @@ func main() {
 	// Auth
 	router.POST("/authenticate")
 
+	// Administrative actions
+	router.POST("/admin")
+
 	// Global video management
 	router.GET("/videos", controllers.GetVideos)
 	router.GET("/video/:video_id", controllers.GetVideo)

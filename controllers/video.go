@@ -15,6 +15,27 @@ import (
 	"github.com/uptrace/bun"
 )
 
+func getLatestVideoByChannel(channel models.Channel) (models.Video, error) {
+	db := sqldb.GetDb()
+	result := models.Video{}
+	err := db.NewSelect().
+		Model(&result).
+		Where("channel_id = ?", channel.Id).
+		OrderExpr("published DESC").
+		Limit(1).
+		Scan(context.Background())
+	if err != nil {
+		return models.Video{}, err
+	}
+	return result, nil
+}
+
+func upsertVideo(video models.Video) (sql.Result, error) {
+	db := sqldb.GetDb()
+	result, err := db.NewInsert().Model(video).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
+	return result, err
+}
+
 func handleQueryString(query *bun.SelectQuery, queryString url.Values) *bun.SelectQuery {
 	orderColumn := "video.published"
 
@@ -150,12 +171,6 @@ func GetVideos(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
-}
-
-func upsertVideo(video models.Video) (sql.Result, error) {
-	db := sqldb.GetDb()
-	result, err := db.NewInsert().Model(video).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
-	return result, err
 }
 
 func PutVideo(ctx *gin.Context) {

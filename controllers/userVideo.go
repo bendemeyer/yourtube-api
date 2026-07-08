@@ -20,12 +20,19 @@ func getUserVideosQuery(userId int32) *bun.SelectQuery {
 		ExcludeColumn("channel_id").
 		ColumnExpr(`"video_view"."progress" as "progress"`).
 		Relation("Channel").
-		Join(`LEFT JOIN "allowed_videos" AS "allowed_video" ON "video"."id" = "allowed_video"."video_id"`).
-		Join(`LEFT JOIN "allowed_channels" AS "allowed_channel" ON "channel"."id" = "allowed_channel"."channel_id"`).
-		Join(`LEFT JOIN "users" AS "user" ON "allowed_video"."user_id" = "user"."id" OR "allowed_channel"."user_id" = "user"."id"`).
-		Join(`LEFT JOIN "blocked_videos" AS "blocked_video" ON "video"."id" = "blocked_video"."video_id" AND "user"."id" = "blocked_video"."user_id"`).
+		Join(`LEFT JION "family_allowed_videos" AS "family_allowed_video" ON "video"."id" = "family_allowed_video"."video_id"`).
+		Join(`LEFT JOIN "families" AS "family" ON "family_allowed_video"."family_id" = "family"."id`).
+		Join(`LEFT JOIN "users" AS "user" ON "family"."id" = "user"."family_id"`).
+		Join(`LEFT JOIN "family_allowed_channels" AS "family_allowed_channel" ON "channel"."id" = "family_allowed_channel"."channel_id"`).
+		Join(`LEFT JOIN "family_blocked_videos" AS "family_blocked_video" ON "video"."id" = "family_blocked_video"."video_id" AND "family"."id" = "family_blocked_video"."family_id"`).
+		Join(`LEFT JOIN "user_allowed_videos" AS "user_allowed_video" ON "video"."id" = "user_allowed_video"."video_id"`).
+		Join(`LEFT JOIN "user_allowed_channels" AS "user_allowed_channel" ON "channel"."id" = "user_allowed_channel"."channel_id"`).
+		Join(`LEFT JOIN "user_blocked_videos" AS "user_blocked_video" ON "video"."id" = "user_blocked_video"."video_id" AND "user"."id" = "user_blocked_video"."user_id"`).
+		Join(`LEFT JOIN "user_blocked_channels" AS "user_blocked_channel" ON "channel"."id" = "user_blocked_channel"."channel_id" AND "user"."id" = "user_blocked_channel"."user_id"`).
 		Join(`LEFT JOIN "video_views" AS "video_view" ON "video"."id" = "video_view"."video_id" AND "user"."id" = "video_view"."user_id"`).
-		Where(`"blocked_video"."video_id" IS NULL`).
+		Where(`"family_blocked_video"."video_id" IS NULL`).
+		Where(`"user_blocked_video"."video_id" IS NULL`).
+		Where(`"user_blocked_channel"."channel_id" IS NULL`).
 		Where(`"user"."id" = ?`, userId)
 }
 

@@ -12,6 +12,9 @@ type User struct {
 	Id              int32            `json:"id" bun:",pk,autoincrement"`
 	Email           string           `json:"email" bun:",unique"`
 	Name            string           `json:"name"`
+	FamiyId         string           `json:"familyId"`
+	Family          *Family          `json:"family" bun:"rel:belongs-to,join:family_id=id"`
+	Role            FamilyMemberRole `json:"role"`
 	AllowedChannels []*Channel       `json:"allowedChannels,omitempty" bun:"m2m:user_allowed_channels,join:User=Channel"`
 	BlockedChannels []*Channel       `json:"blockedChannels,omitempty" bun:"m2m:user_blocked_channels,join:User=Channel"`
 	AllowedVideos   []*Video         `json:"allowedVideos,omitempty" bun:"m2m:user_allowed_videos,join:User=Video"`

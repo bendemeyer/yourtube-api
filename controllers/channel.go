@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"iter"
 	"net/http"
 	"strconv"
@@ -15,18 +16,57 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func getChannel(channelId string) ([]models.Channel, error) {
-	db := sqldb.GetDb()
-	channels := []models.Channel{}
-	err := db.NewSelect().Model(models.Channel{}).Where("id = ?", channelId).Scan(context.Background(), &channels)
-	return channels, err
+func bootstrapChannel(handle string) (models.Channel, error) {
+	channel, err := repositories.GetChannelFromHandle(handle)
+	if err != nil {
+		return models.Channel{}, err
+	}
+	_, err = upsertChannel(channel)
+	return channel, err
 }
 
-func getChannelByHandle(handle string) ([]models.Channel, error) {
+func bootstrapChannelVideos(channel models.Channel) {
+	videoGenerator := repositories.GenerateVideosByChannel(channel, time.Time{})
+	for video := range videoGenerator {
+		upsertVideo(video)
+	}
+}
+
+func upsertChannel(channel models.Channel) (sql.Result, error) {
 	db := sqldb.GetDb()
-	channels := []models.Channel{}
-	err := db.NewSelect().Model(models.Channel{}).Where("handle = ?", handle).Scan(context.Background(), &channels)
-	return channels, err
+	exists, exists_err := channelExists(channel.Id)
+	result, err := db.NewInsert().Model(channel).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
+	if !exists && exists_err == nil && err == nil {
+		go bootstrapChannelVideos(channel)
+	}
+	return result, err
+}
+
+func channelExists(channelId string) (bool, error) {
+	db := sqldb.GetDb()
+	channel := models.Channel{}
+	err := db.NewSelect().Model(&channel).Where("id = ?", channelId).Scan(context.Background())
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func getChannel(channelId string) (models.Channel, error) {
+	db := sqldb.GetDb()
+	channel := models.Channel{}
+	err := db.NewSelect().Model(&channel).Where("id = ?", channelId).Scan(context.Background())
+	return channel, err
+}
+
+func getChannelByHandle(handle string) (models.Channel, error) {
+	db := sqldb.GetDb()
+	channel := models.Channel{}
+	err := db.NewSelect().Model(&channel).Where("handle = ?", handle).Scan(context.Background())
+	return channel, err
 }
 
 func getChannels(offset int, limit int) ([]models.Channel, error) {
@@ -69,18 +109,18 @@ func generateAllChannels() iter.Seq[models.Channel] {
 }
 
 func GetChannel(ctx *gin.Context) {
-	channels, err := getChannel(ctx.Param("channel_id"))
+	channel, err := getChannel(ctx.Param("channel_id"))
+	if errors.Is(err, sql.ErrNoRows) {
+		ctx.JSON(http.StatusNotFound, gin.H{})
+		return
+	}
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	if len(channels) == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{})
-		return
-	}
-	ctx.JSON(http.StatusOK, channels[0])
+	ctx.JSON(http.StatusOK, channel)
 }
 
 func GetChannels(ctx *gin.Context) {
@@ -142,35 +182,9 @@ func GetChannels(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func bootstrapChannel(handle string) (models.Channel, error) {
-	channel, err := repositories.GetChannelFromHandle(handle)
-	if err != nil {
-		return models.Channel{}, err
-	}
-	_, err = upsertChannel(channel)
-	return channel, err
-}
-
-func bootstrapChannelVideos(channel models.Channel) {
-	videoGenerator := repositories.GenerateVideosByChannel(channel, time.Time{})
-	for video := range videoGenerator {
-		upsertVideo(video)
-	}
-}
-
-func upsertChannel(channel models.Channel) (sql.Result, error) {
-	db := sqldb.GetDb()
-	exists, exists_err := getChannel(channel.Id)
-	result, err := db.NewInsert().Model(channel).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
-	if len(exists) == 0 && err == nil && exists_err == nil {
-		go bootstrapChannelVideos(channel)
-	}
-	return result, err
-}
-
 func PutChannel(ctx *gin.Context) {
 	var channelModel models.Channel
-	ctx.BindJSON(&channelModel)
+	ctx.ShouldBindJSON(&channelModel)
 	result, err := upsertChannel(channelModel)
 	rows, _ := result.RowsAffected()
 	if err != nil {
@@ -184,4 +198,44 @@ func PutChannel(ctx *gin.Context) {
 			"rowsAffected": rows,
 		})
 	}
+}
+
+func AddChannel(ctx *gin.Context) {
+	type AddChannelPostBody struct {
+		Handle string `json:"handle"`
+	}
+	var body AddChannelPostBody
+	body_err := ctx.ShouldBindJSON(&body)
+	if body_err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   body_err.Error(),
+		})
+	}
+
+	_, err := getChannelByHandle(body.Handle)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+	if err == nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   errors.New("Cannot add this channel, it already exists"),
+		})
+	}
+
+	channel, err := bootstrapChannel(body.Handle)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"channel": channel,
+	})
 }

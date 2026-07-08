@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AddUserChannel(ctx *gin.Context) {
+func AllowUserChannel(ctx *gin.Context) {
 	userId, id_err := strconv.Atoi(ctx.Param("user_id"))
 	if id_err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -34,8 +36,8 @@ func AddUserChannel(ctx *gin.Context) {
 	}
 
 	var channel models.Channel
-	exists, exists_err := getChannelByHandle(body.Handle)
-	if len(exists) == 0 && exists_err == nil {
+	existing, exists_err := getChannelByHandle(body.Handle)
+	if errors.Is(exists_err, sql.ErrNoRows) {
 		c, err := bootstrapChannel(body.Handle)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -45,7 +47,7 @@ func AddUserChannel(ctx *gin.Context) {
 		}
 		channel = c
 	} else {
-		channel = exists[0]
+		channel = existing
 	}
 
 	db := sqldb.GetDb()
@@ -77,7 +79,7 @@ func AddUserChannel(ctx *gin.Context) {
 	})
 }
 
-func DeleteUserChannel(ctx *gin.Context) {
+func DeleteAllowedUserChannel(ctx *gin.Context) {
 	userId, id_err := strconv.Atoi(ctx.Param("user_id"))
 	if id_err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{

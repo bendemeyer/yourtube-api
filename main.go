@@ -57,46 +57,62 @@ func main() {
 	// Administrative actions
 	router.POST("/admin")
 
+	// Global channel management
+	router.GET("/channel", controllers.GetChannels)
+	router.POST("/channel", controllers.AddChannel)
+	router.GET("/channel/:channel_id", controllers.GetChannel)
+
 	// Global video management
-	router.GET("/videos", controllers.GetVideos)
+	router.GET("/video", controllers.GetVideos)
 	router.GET("/video/:video_id", controllers.GetVideo)
 	router.PUT("/video/:video_id", controllers.PutVideo)
 
-	// Global channel management
-	router.GET("/channels", controllers.GetChannels)
-	router.POST("/channels")
-	router.GET("/channel/:channel_id", controllers.GetChannel)
-	router.PUT("/channel/:channel_id", controllers.PutChannel)
+	// Family management
+	router.POST("/family")
+	router.GET("/family/:family_id")
+	router.PATCH("/family/:family_id")
+
+	// Family-level channel management
+	router.GET("/family/:family_id/allowed-channel")
+	router.POST("/family/:family_id/allowed-channel")
+	router.DELETE("/family/:family_id/allowed-channel/:channel_id")
+
+	// Family-level video exception management
+	router.GET("/family/:family_id/allowed-video")
+	router.PUT("/family/:family_id/allowed-video/:video_id")
+	router.DELETE("/family/:family_id/allowed-video/:video_id")
+	router.GET("/family/:family_id/blocked-video")
+	router.PUT("/family/:family_id/blocked-video/:video_id")
+	router.DELETE("/family/:family_id/blocked-video/:video_id")
 
 	// User management
-	router.POST("/users", controllers.AddUser)
+	router.POST("/user", controllers.AddUser)
 	router.GET("/user/:user_id")
 	router.PUT("/user/:user_id")
 
-	// User parent/child management
-	router.GET("/user/:user_id/parent")
-	router.PUT("/user/:user_id/parent/:parent_id")
-	router.DELETE("/user/:user_id/parent")
-	router.GET("/user/:user_id/children")
-
 	// User-level channel management
-	router.GET("/user/:user_id/channels")
-	router.POST("/user/:user_id/channels", controllers.AddUserChannel)
-	router.GET("/user/:user_id/channel/:channel_id")
-	router.DELETE("/user/:user_id/channel/:channel_id", controllers.DeleteUserChannel)
-
-	// User-level available videos
-	router.GET("/user/:user_id/videos", controllers.GetUserVideos)
-	router.GET("/user/:user_id/video/:video_id", controllers.GetUserVideo)
+	router.GET("/user/:user_id/allowed-channel")
+	router.POST("/user/:user_id/allowed-channel", controllers.AllowUserChannel)
+	router.GET("/user/:user_id/allowed-channel/:channel_id")
+	router.DELETE("/user/:user_id/allowed-channel/:channel_id", controllers.DeleteAllowedUserChannel)
+	router.GET("/user/:user_id/blocked-channel")
+	router.POST("/user/:user_id/blocked-channel")
+	router.DELETE("/user/:user_id/blocked-channel/:channel_id")
 
 	// User-level video exception management
-	router.PUT("/user/:user_id/allow/:video_id")
-	router.DELETE("/user/:user_id/allow/:video_id")
-	router.PUT("/user/:user_id/block/:video_id")
-	router.DELETE("/user/:user_id/block/:video_id")
+	router.GET("/user/:user_id/allowed-video")
+	router.PUT("/user/:user_id/allowed-video/:video_id")
+	router.DELETE("/user/:user_id/allowed-video/:video_id")
+	router.GET("/user/:user_id/blocked-video")
+	router.PUT("/user/:user_id/blocked-video/:video_id")
+	router.DELETE("/user/:user_id/blocked-video/:video_id")
+
+	// User-level available videos
+	router.GET("/user/:user_id/video", controllers.GetUserVideos)
+	router.GET("/user/:user_id/video/:video_id", controllers.GetUserVideo)
 
 	// User-level video view management
-	router.GET("/user/:user_id/views", controllers.GetViewedVideos)
+	router.GET("/user/:user_id/view", controllers.GetViewedVideos)
 	router.POST("/user/:user_id/view/:video_id", controllers.UpdateProgress)
 
 	listener, err := GetListener(port, socket)

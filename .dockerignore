@@ -1,1 +1,7 @@
-**/docker
+.dockerignore
+docker-compose.yml
+Dockerfile
+docker
+tmp
+bin
+.git

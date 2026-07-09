@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    volumes:
+      - ./docker/data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: yourtube
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/sockets:/sockets
+    environment:
+      PORT: "8080"
+      #SOCKET: "/sockets/api.sock"
+      PGDSN: postgresql://postgres:password@db:5432/yourtube?sslmode=disable
+      YOUTUBE_DATA_API_KEY: ${YOUTUBE_DATA_API_KEY}
+    develop:
+      watch:
+        - path: cmd
+          action: rebuild
+        - path: internal
+          action: rebuild
+        - path: go.mod
+          action: rebuild

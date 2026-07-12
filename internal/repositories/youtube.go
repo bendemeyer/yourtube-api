@@ -142,7 +142,7 @@ func getVideos(videoIds []string, shorts bool) ([]models.Video, error) {
 			Title:       video.Snippet.Title,
 			Description: video.Snippet.Description,
 			Published:   video.Snippet.PublishedAt,
-			Duration:    int32(vidDuration.Seconds),
+			Duration:    int32(vidDuration.ToTimeDuration().Seconds()),
 			IsShort:     shorts,
 			Tags:        video.Snippet.Tags,
 			Thumbnails: []string{
@@ -174,6 +174,9 @@ func generateShortIdsByChannel(channel models.Channel) iter.Seq[string] {
 				} else {
 					complete = true
 				}
+			}
+			if len(buffer) == 0 {
+				continue
 			}
 			next := buffer[0]
 			buffer = buffer[1:]
@@ -218,6 +221,9 @@ func GenerateVideosByChannel(channel models.Channel, after time.Time) iter.Seq[m
 				for _, video := range videos {
 					buffer = append(buffer, video)
 				}
+			}
+			if len(buffer) == 0 {
+				continue
 			}
 			next := buffer[0]
 			buffer = buffer[1:]

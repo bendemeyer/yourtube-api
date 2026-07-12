@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
-//go:embed videos.sql
+//go:embed db.sql
 var alterVideosSql string
 
 var db *bun.DB = nil
@@ -28,10 +28,10 @@ func InitDb(dsn string) {
 
 	tableModels := []interface{}{
 		(*models.Channel)(nil),
+		(*models.Category)(nil),
 		(*models.Video)(nil),
 		(*models.Playlist)(nil),
 		(*models.PlaylistVideo)(nil),
-		(*models.Category)(nil),
 		(*models.Family)(nil),
 		(*models.FamilyAllowedChannel)(nil),
 		(*models.FamilyAllowedVideo)(nil),
@@ -56,7 +56,7 @@ func InitDb(dsn string) {
 	)
 
 	for _, model := range tableModels {
-		_, err := bundb.NewCreateTable().Model(model).IfNotExists().Exec(ctx)
+		_, err := bundb.NewCreateTable().Model(model).WithForeignKeys().IfNotExists().Exec(ctx)
 		if err != nil {
 			panic(err)
 		}

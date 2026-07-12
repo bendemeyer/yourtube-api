@@ -7,6 +7,7 @@ import (
 	"iter"
 	"log"
 	"net/http"
+	"reflect"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -115,6 +116,58 @@ func generateAllChannels() iter.Seq[models.Channel] {
 			}
 		}
 	}
+}
+
+func deleteChannel(channel models.Channel) (sql.Result, error) {
+	db := repositories.GetDb()
+	var channelVideos []models.Video
+	err := db.NewSelect().Model(&channelVideos).Where("channel_id = ?", channel.Id).Scan(context.Background())
+	if err != nil {
+		return *new(sql.Result), err
+	}
+	for _, video := range channelVideos {
+		result, err := deleteVideo(video)
+		if err != nil {
+			return result, err
+		}
+	}
+	var channelPlaylists []models.Playlist
+	err = db.NewSelect().Model(&channelPlaylists).Where("channel_id = ?", channel.Id).Scan(context.Background())
+	if err != nil {
+		return *new(sql.Result), err
+	}
+	for _, playlist := range channelPlaylists {
+		result, err := deletePlaylist(playlist)
+		if err != nil {
+			return result, err
+		}
+	}
+	dependencies := []string{
+		db.Table(reflect.TypeOf(models.FamilyAllowedChannel{})).Name,
+		db.Table(reflect.TypeOf(models.UserAllowedChannel{})).Name,
+		db.Table(reflect.TypeOf(models.UserBlockedChannel{})).Name,
+	}
+	for _, dependency := range dependencies {
+		result, err := db.NewDelete().Table(dependency).Where("channel_id = ?", channel.Id).Exec(context.Background())
+		if err != nil {
+			return result, err
+		}
+	}
+	return db.NewDelete().Model(&models.Channel{}).Where("id = ?", channel.Id).Exec(context.Background())
+}
+
+func deletePlaylist(playlist models.Playlist) (sql.Result, error) {
+	db := repositories.GetDb()
+	dependencies := []string{
+		db.Table(reflect.TypeOf(models.PlaylistVideo{})).Name,
+	}
+	for _, dependency := range dependencies {
+		result, err := db.NewDelete().Table(dependency).Where("playlist_id = ?", playlist.Id).Exec(context.Background())
+		if err != nil {
+			return result, err
+		}
+	}
+	return db.NewDelete().Model(&playlist).Where("id = ?", playlist.Id).Exec(context.Background())
 }
 
 func GetChannel(ctx *gin.Context) {
@@ -255,9 +308,15 @@ func AddChannel(ctx *gin.Context) {
 }
 
 func DeleteChannel(ctx *gin.Context) {
-	channelId := ctx.Param("channel_id")
-	db := repositories.GetDb()
-	_, err := db.NewDelete().Model(&models.Channel{}).Where("id = ?", channelId).Exec(ctx)
+	channel, err := getChannel(ctx.Param("channel_id"))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	_, err = deleteChannel(channel)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

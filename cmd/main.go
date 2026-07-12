@@ -51,7 +51,7 @@ func main() {
 	repositories.InitDb(dsn)
 
 	// Healthcheck
-	router.GET("/_healthcheck")
+	router.GET("/_healthcheck", controllers.RunHealthCheck)
 
 	// Auth
 	router.POST("/authenticate")
@@ -71,13 +71,13 @@ func main() {
 	router.PUT("/video/:video_id", controllers.PutVideo)
 
 	// Family management
-	router.POST("/family")
+	router.POST("/family", controllers.AddFamily)
 	router.GET("/family/:family_id")
 	router.PATCH("/family/:family_id")
 
 	// Family-level channel management
 	router.GET("/family/:family_id/allowed-channel")
-	router.POST("/family/:family_id/allowed-channel")
+	router.POST("/family/:family_id/allowed-channel", controllers.AllowFamilyChannel)
 	router.DELETE("/family/:family_id/allowed-channel/:channel_id")
 
 	// Family-level video exception management

@@ -18,22 +18,22 @@ func getUserVideosQuery(userId int32) *bun.SelectQuery {
 	return db.NewSelect().
 		Model((*models.Video)(nil)).
 		ExcludeColumn("channel_id").
-		ColumnExpr(`"video_view"."progress" as "progress"`).
+		ColumnExpr(`"uvv"."progress" as "progress"`).
 		Relation("Channel").
-		Join(`LEFT JION "family_allowed_videos" AS "family_allowed_video" ON "video"."id" = "family_allowed_video"."video_id"`).
-		Join(`LEFT JOIN "families" AS "family" ON "family_allowed_video"."family_id" = "family"."id`).
-		Join(`LEFT JOIN "users" AS "user" ON "family"."id" = "user"."family_id"`).
-		Join(`LEFT JOIN "family_allowed_channels" AS "family_allowed_channel" ON "channel"."id" = "family_allowed_channel"."channel_id"`).
-		Join(`LEFT JOIN "family_blocked_videos" AS "family_blocked_video" ON "video"."id" = "family_blocked_video"."video_id" AND "family"."id" = "family_blocked_video"."family_id"`).
-		Join(`LEFT JOIN "user_allowed_videos" AS "user_allowed_video" ON "video"."id" = "user_allowed_video"."video_id"`).
-		Join(`LEFT JOIN "user_allowed_channels" AS "user_allowed_channel" ON "channel"."id" = "user_allowed_channel"."channel_id"`).
-		Join(`LEFT JOIN "user_blocked_videos" AS "user_blocked_video" ON "video"."id" = "user_blocked_video"."video_id" AND "user"."id" = "user_blocked_video"."user_id"`).
-		Join(`LEFT JOIN "user_blocked_channels" AS "user_blocked_channel" ON "channel"."id" = "user_blocked_channel"."channel_id" AND "user"."id" = "user_blocked_channel"."user_id"`).
-		Join(`LEFT JOIN "video_views" AS "video_view" ON "video"."id" = "video_view"."video_id" AND "user"."id" = "video_view"."user_id"`).
-		Where(`"family_blocked_video"."video_id" IS NULL`).
-		Where(`"user_blocked_video"."video_id" IS NULL`).
-		Where(`"user_blocked_channel"."channel_id" IS NULL`).
-		Where(`"user"."id" = ?`, userId)
+		Join(`LEFT JOIN "family_allowed_channels" AS "fac" ON "channel"."id" = "fac"."channel_id" `).
+		Join(`LEFT JOIN "family_allowed_videos" AS "fav" ON "video"."id" = "fav"."video_id"`).
+		Join(`LEFT JOIN "family_blocked_videos" AS "fbv" ON "video"."id" = "fbv"."video_id"`).
+		Join(`LEFT JOIN "user_allowed_channels" AS "uac" ON "channel"."id" = "uac"."channel_id"`).
+		Join(`LEFT JOIN "user_blocked_channels" AS "ubc" ON "channel"."id" = "ubc"."channel_id"`).
+		Join(`LEFT JOIN "user_allowed_videos" AS "uav" ON "video"."id" = "uav"."video_id"`).
+		Join(`LEFT JOIN "user_blocked_videos" AS "ubv" ON "video"."id" = "ubv"."video_id"`).
+		Join(`LEFT JOIN "families" AS "f" ON "fac"."family_id" = "f"."id" OR "fav"."family_id" = "f"."id" OR "fbv"."family_id" = "f"."id"`).
+		Join(`LEFT JOIN "users" AS "u" ON "f"."id" = "u"."family_id" OR "uac"."user_id" = "u"."id" OR "ubc"."user_id" = "u"."id" OR "uav"."user_id" = "u"."id" OR "ubv"."user_id" = "u"."id"`).
+		Join(`LEFT JOIN "user_video_views" AS "uvv" ON "video"."id" = "uvv"."video_id" AND "u"."id" = "uvv"."user_id"`).
+		Where(`"u"."id" = ?`, userId).
+		Where(`"fbv"."video_id" IS NULL`).
+		Where(`"ubc"."channel_id" IS NULL`).
+		Where(`"ubv"."video_id" IS NULL`)
 }
 
 func GetUserVideos(ctx *gin.Context) {
@@ -54,7 +54,11 @@ func GetUserVideos(ctx *gin.Context) {
 
 	var videos []models.UserVideoResult
 	query := getUserVideosQuery(int32(userId))
-	query = handleQueryString(query, ctx.Request.URL.Query())
+	if ctx.Request.URL.Query().Get("history") == "1" {
+		query = query.Where("progress > 0").OrderExpr("uvv.timestamp DESC")
+	} else {
+		query = handleQueryString(query, ctx.Request.URL.Query())
+	}
 	query = paginate(query, page, pageSize)
 	sqlString := query.String()
 	count, err := query.ScanAndCount(ctx, &videos)
@@ -186,7 +190,7 @@ func GetViewedVideos(ctx *gin.Context) {
 	var videos []models.UserVideoResult
 	query := getUserVideosQuery(int32(userId)).
 		Where("progress > 0").
-		OrderExpr(`"video_view"."timestamp" DESC`).
+		OrderExpr(`"uvv"."timestamp" DESC`).
 		Limit(20)
 
 	sqlString := query.String()

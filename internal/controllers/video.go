@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 	"yourtube/internal/models"
@@ -34,6 +35,25 @@ func upsertVideo(video models.Video) (sql.Result, error) {
 	db := repositories.GetDb()
 	result, err := db.NewInsert().Model(&video).On("CONFLICT (id) DO UPDATE").Exec(context.Background())
 	return result, err
+}
+
+func deleteVideo(video models.Video) (sql.Result, error) {
+	db := repositories.GetDb()
+	dependencies := []string{
+		db.Table(reflect.TypeOf(models.FamilyAllowedVideo{})).Name,
+		db.Table(reflect.TypeOf(models.FamilyBlockedVideo{})).Name,
+		db.Table(reflect.TypeOf(models.UserAllowedVideo{})).Name,
+		db.Table(reflect.TypeOf(models.UserBlockedVideo{})).Name,
+		db.Table(reflect.TypeOf(models.UserVideoView{})).Name,
+		db.Table(reflect.TypeOf(models.PlaylistVideo{})).Name,
+	}
+	for _, dependency := range dependencies {
+		result, err := db.NewDelete().Table(dependency).Where("video_id = ?", video.Id).Exec(context.Background())
+		if err != nil {
+			return result, err
+		}
+	}
+	return db.NewDelete().Model(&video).Where("id = ?", video.Id).Exec(context.Background())
 }
 
 func handleQueryString(query *bun.SelectQuery, queryString url.Values) *bun.SelectQuery {

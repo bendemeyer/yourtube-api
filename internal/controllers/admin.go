@@ -50,5 +50,19 @@ func DoAdminAction(ctx *gin.Context) {
 			"success": true,
 		})
 	}
+}
 
+func RunHealthCheck(ctx *gin.Context) {
+	db := repositories.GetDb()
+	err := db.Ping()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
 }

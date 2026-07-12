@@ -12,16 +12,22 @@ func AddUser(ctx *gin.Context) {
 	db := repositories.GetDb()
 
 	type AddUserRequestBody struct {
-		Email string `json:"email"`
+		Name     string                  `json:"name"`
+		Email    string                  `json:"email"`
+		FamilyId int32                   `json:"familyId"`
+		Role     models.FamilyMemberRole `json:"role"`
 	}
 	var body AddUserRequestBody
-	ctx.ShouldBindJSON(body)
+	ctx.ShouldBindJSON(&body)
 
 	user := models.User{
-		Email: body.Email,
+		Name:    body.Name,
+		Email:   body.Email,
+		FamiyId: body.FamilyId,
+		Role:    body.Role,
 	}
 
-	query := db.NewInsert().Model(user)
+	query := db.NewInsert().Model(&user)
 	sqlString := query.String()
 	_, err := query.Exec(ctx)
 	if err != nil {
@@ -37,6 +43,7 @@ func AddUser(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"success": true,
+		"user":    user,
 		"debug": gin.H{
 			"sql": sqlString,
 		},
